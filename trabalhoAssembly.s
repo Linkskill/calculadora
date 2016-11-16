@@ -1,108 +1,110 @@
 
 
-;r0, r1 e r2 s„o usados como entradas e saÌdas do plugin Embest Board
-;r3 È o valor digitado
-;r4 È usado para auxiliar na multiplicaÁ„o para os valor que est· sendo
+;r0, r1 e r2 s√£o usados como entradas e sa√≠das do plugin Embest Board
+;r3 √© o valor sendo digitado
+;r4 √© usado para auxiliar na multiplica√ß√£o para os valor que est√° sendo
 ;		digitado. Se digitarmos 1 e depois 2, teremos 1*10 + 2 = 12
-;		SÛ È usado porque n„o existe uma instruÁ„o "mul r0, r1, #ctc"
+;		S√≥ √© usado porque n√£o existe uma instru√ß√£o "mul r0, r1, #ctc"
 mov r4, #10
-;r5 tambÈm È usado para auxiliar no valor sendo digitado
-;	N„o È possÌvel fazer "mul r0, r0, r1" (x = x*y)
-;	Ent„o temos que usar outro registrador com uma cÛpia do valor
-;r6 ser· o ponteiro que percorre a pilha
-;r7 ser· o fundo da pilha
-;r8 ser· o n˙mero de elementos da pilha
+;r5 tamb√©m √© usado para auxiliar no valor sendo digitado
+;	N√£o √© poss√≠vel fazer "mul r0, r0, r1" (x = x*y)
+;	Ent√£o temos que usar outro registrador com uma c√≥pia do valor
+;r6 ser√° o ponteiro que percorre a pilha
+;r7 ser√° o fundo da pilha
+;r8 ser√° o n√∫mero de elementos da pilha
 ldr r7, =pilha
-mov r6, r7 ; ponteiro aponta para o fundo da pilha
-mov r8, #0 ;comeÁa com 0 elementos
+ldr r6, =pilha
+;mov r6, r7 ; ponteiro aponta para o fundo da pilha
+mov r8, #0 ;come√ßa com 0 elementos
 
 
 inicio:
-	cmp r0, #0 ;se n„o pressionou nenhum bot„o, o r0 vai ter 000000000000
-	bne continua
+	cmp r0, #0 ;se nenhum bot√£o foi pressionado, o r0 vai ter 0
+	beq continua ;se n√£o pressionou nenhum bot√£o, n√£o precisa mudar nada na tela
 	swi 0x206 ;limpa a tela LCD
-continua:
 	mov r0, #0
 	mov r1, #0
-	mov r2, r3 ;imprime o valor que est· sendo digitado no topo
+	mov r2, r3 ;imprime o valor que est√° sendo digitado no topo
 	swi 0x205
 	
-	cmp r8, #0 ;compara o topo atual com o fundo da pilha
-	beq loopBotoes ;se n„o tem elementos, n„o precisa imprimir nada
-	;mov r4, r6
+	cmp r8, #0
+	beq loopBotoes ;se n√£o tem elementos, n√£o precisa imprimir nada
+	
+	mov r5, r6 	;cria uma c√≥pia do r6 pois esse valor ser√° perdido
+			;quando for imprimir a pilha
 	loopPilha:
-		add r1, r1, #1 ;vai pra prÛxima linha do display LCD
+		add r1, r1, #1 ;vai pra pr√≥xima linha do display LCD
+		sub r6, r6, #4 ;desce o ponteiro para a pr√≥xima posi√ß√£o
 		ldr r2, [r6] ;pega o valor do topo da pilha
 		swi 0x205 ;imprime o valor
-		sub r6, r6, #4 ;desce o ponteiro para a prÛxima posiÁ„o
-		cmp r6, r7 ;compara o topo com o fundo da pilha
-		beq loopBotoes ;se s„o iguais, ent„o n„o precisa mais imprimir, sai do loop
-		b loopPilha ;sen„o, imprime o prÛximo
-	
+		cmp r6, r7 ;compara o topo atual com o fundo da pilha
+		beq loopBotoes ;se s√£o iguais, ent√£o n√£o precisa mais imprimir, sai do loop
+		b loopPilha ;sen√£o, imprime o pr√≥ximo
+	mov r6, r5 ;volta o endere√ßo do topo guardado
+continua:
 	loopBotoes:
-		mov r6, r4
-		mov r4, #10
-		swi 0x203 ;descobre que bot„o foi pressionado
-		;lembrando que os botıes azuis tem o seguinte layout
+		swi 0x203 ;descobre que bot√£o foi pressionado
+		;lembrando que os bot√µes azuis tem o seguinte layout
 		;	[1]	[2]	[3]		[+]
 		;	[4]	[5]	[6]		[-]
 		;	[7]	[8]	[9]		[*]
-		;	[]	[0]	[ENTER]	[/]
+		;	[]	[0]	[ENTER]		[/]
 		;
-		;Explicando melhor o que acontece, temos 16 botıes azuis
-		;Em swi 0x203, r0 recebe um n˙mero com somente um bit ligado.
-		;Se for o bot„o da posiÁ„o 0, ent„o o 1∫bit estar· ligado
+		;Explicando melhor o que acontece, temos 16 bot√µes azuis
+		;Em swi 0x203, r0 recebe um n√∫mero com somente um bit ligado.
+		;Se for o bot√£o da posi√ß√£o 0, ent√£o o 1¬∫bit estar√° ligado
 		;	-> ...01 = ...01 em hexa
-		;Se for o botao da 5™ posiÁ„o, ent„o o 6∫ bit estar· ligado,
+		;Se for o botao da 5¬™ posi√ß√£o, ent√£o o 6¬∫ bit estar√° ligado,
 		;	-> 100000 = 20 em hexa
 			
-		mov r5, r3 ;cria uma cÛpia do valor pra usar no "valor = valor*10"
+		mov r5, r3 	;cria uma c√≥pia do valor pois n√£o d√° pra fazer "mul r3, r3, r4"
+				;Os registradores precisam ser diferentes
 		
-		cmp r0, #0x01 ;se foi o bot„o 1
+		cmp r0, #0x01 ;se foi o bot√£o 1
 		beq um
 	
-		cmp r0, #0x02 ;se foi o bot„o 2
+		cmp r0, #0x02 ;se foi o bot√£o 2
 		beq dois
 		
-		cmp r0, #0x04 ;se foi o bot„o 3
+		cmp r0, #0x04 ;se foi o bot√£o 3
 		beq tres
 		
-		cmp r0, #0x10 ;se foi o bot„o 4
+		cmp r0, #0x10 ;se foi o bot√£o 4
 		beq quatro
 	
-		cmp r0, #0x20 ;se foi o bot„o 5
+		cmp r0, #0x20 ;se foi o bot√£o 5
 		beq cinco
 		
-		cmp r0, #0x40 ;se foi o bot„o 6
+		cmp r0, #0x40 ;se foi o bot√£o 6
 		beq seis
 		
-		cmp r0, #0x100 ;se foi o bot„o 7
+		cmp r0, #0x100 ;se foi o bot√£o 7
 		beq sete
 		
-		cmp r0, #0x200 ;se foi o bot„o 8
+		cmp r0, #0x200 ;se foi o bot√£o 8
 		beq oito
 		
-		cmp r0, #0x400 ;se foi o bot„o 9
+		cmp r0, #0x400 ;se foi o bot√£o 9
 		beq nove
 		
-		;cmp r0, #0x1000 -> n„o faz nada
+		;cmp r0, #0x1000 -> n√£o faz nada
 	
-		cmp r0, #0x2000 ;se foi o bot„o 0
+		cmp r0, #0x2000 ;se foi o bot√£o 0
 		beq zero
 		
-		cmp r0, #0x4000 ;se foi o bot„o Enter
+		cmp r0, #0x4000 ;se foi o bot√£o Enter
 		beq enter
 
-		;cmp r0, #0x08 ;se foi o bot„o soma
+		;cmp r0, #0x08 ;se foi o bot√£o soma
 		;beq soma
 		
-		;cmp r0, #0x80 ;se foi o bot„o sub
+		;cmp r0, #0x80 ;se foi o bot√£o sub
 		;beq subtracao
 		
-		;cmp r0, #0x800 ;se foi o bot„o mult
+		;cmp r0, #0x800 ;se foi o bot√£o mult
 		;beq multiplicacao
 		
-		;cmp r0, #0x8000 ;se foi o bot„o div
+		;cmp r0, #0x8000 ;se foi o bot√£o div
 		;beq divisao
 		b inicio
 		
@@ -147,7 +149,6 @@ continua:
 		b inicio
 	zero:
 		mul r3, r5, r4
-		add r3, r3, #0
 		b inicio
 	enter:
 		cmp r8, #15
@@ -171,8 +172,8 @@ naoCabeMais:
 	
 fim:
 	b fim
-	
-frasept1: .ascii "Pilha cheia, realize uma operaÁ„o"
-frasept2: .ascii "ou clique no bot„o preto esquerdo"
+
+pilha: .space 60 ;aloca 15 espa√ßos de 4 bytes (32 bits)
+frasept1: .ascii "Pilha cheia, realize uma opera√ß√£o"
+frasept2: .ascii "ou clique no bot√£o preto esquerdo"
 frasept3: .ascii "para resetar a pilha"
-pilha: .space 60 ;aloca 15 espaÁos de 4 bytes (32 bits)
