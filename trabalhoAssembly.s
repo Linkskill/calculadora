@@ -20,7 +20,7 @@ mov r8, #0 ;começa com 0 elementos
 
 inicio:
 	cmp r0, #0 ;se nenhum botão foi pressionado, o r0 vai ter 0
-	beq continua ;se não pressionou nenhum botão, não precisa mudar nada na tela
+	beq loopBotoes ;se não pressionou nenhum botão, não precisa mudar nada na tela
 	swi 0x206 ;limpa a tela LCD
 	mov r0, #0
 	mov r1, #0
@@ -38,10 +38,11 @@ inicio:
 		ldr r2, [r6] ;pega o valor do topo da pilha
 		swi 0x205 ;imprime o valor
 		cmp r6, r7 ;compara o topo atual com o fundo da pilha
-		beq loopBotoes ;se são iguais, então não precisa mais imprimir, sai do loop
+		beq continua ;se são iguais, então não precisa mais imprimir, sai do loop
 		b loopPilha ;senão, imprime o próximo
-	mov r6, r5 ;volta o endereço do topo guardado
+
 continua:
+	mov r6, r5 ;volta o endereço do topo guardado
 	loopBotoes:
 		swi 0x203 ;descobre que botão foi pressionado
 		;lembrando que os botões azuis tem o seguinte layout
@@ -154,6 +155,7 @@ continua:
 		cmp r8, #15
 		beq naoCabeMais
 		str r3, [r6], #4
+		mov r3, #0
 		add r8, r8, #1
 		b inicio
 		
