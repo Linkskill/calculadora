@@ -10,7 +10,7 @@ mov r4, #10
 ;	Não é possível fazer "mul r0, r0, r1" (x = x*y)
 ;	Então temos que usar outro registrador com uma cópia do valor
 ;r6 será o ponteiro que percorre a pilha
-;r7 será o fundo da pilha
+;r7 será o fundo da pilha (início do vetor)
 ;r8 será o número de elementos da pilha
 ldr r7, =pilha
 ldr r6, =pilha
@@ -32,11 +32,12 @@ inicio:
 	
 	mov r5, r6 	;cria uma cópia do r6 pois esse valor será perdido
 			;quando for imprimir a pilha
+	mov r0, #30
 	loopPilha:
-		add r1, r1, #1 ;vai pra próxima linha do display LCD
 		sub r6, r6, #4 ;desce o ponteiro para a próxima posição
 		ldr r2, [r6] ;pega o valor do topo da pilha
 		swi 0x205 ;imprime o valor
+		add r1, r1, #1 ;vai pra próxima linha do display LCD
 		cmp r6, r7 ;compara o topo atual com o fundo da pilha
 		beq continua ;se são iguais, então não precisa mais imprimir, sai do loop
 		b loopPilha ;senão, imprime o próximo
@@ -89,6 +90,7 @@ continua:
 		beq nove
 		
 		;cmp r0, #0x1000 -> não faz nada
+		;Talvez dê pra fazer algo como DEL (apaga o último dígito)
 	
 		cmp r0, #0x2000 ;se foi o botão 0
 		beq zero
@@ -96,14 +98,14 @@ continua:
 		cmp r0, #0x4000 ;se foi o botão Enter
 		beq enter
 
-		;cmp r0, #0x08 ;se foi o botão soma
-		;beq soma
+		cmp r0, #0x08 ;se foi o botão soma
+		beq soma
 		
-		;cmp r0, #0x80 ;se foi o botão sub
-		;beq subtracao
+		cmp r0, #0x80 ;se foi o botão sub
+		beq subtracao
 		
-		;cmp r0, #0x800 ;se foi o botão mult
-		;beq multiplicacao
+		cmp r0, #0x800 ;se foi o botão mult
+		beq multiplicacao
 		
 		;cmp r0, #0x8000 ;se foi o botão div
 		;beq divisao
@@ -158,24 +160,94 @@ continua:
 		mov r3, #0
 		add r8, r8, #1
 		b inicio
+	soma:
+		cmp r8, #0
+		beq naoTemElementos
+		cmp r8, #1
+		beq naoTemElementos
+						;como r6 é a próxima posição a ser preenchida, é preciso
+		sub r6, r6, #4	;voltar o ponteiro para o último valor preenchido
+		ldr r1, [r6]	;lê o valor do topo da pilha
+		sub r6, r6, #4	;atualiza o ponteiro
+		ldr r2, [r6]	;lê o segundo valor
+		add r1, r1, r2	;soma os dois
+		str r1, [r6], #4	;guarda na pilha
+		sub r8, r8, #1 ; agora tem um elemento a menos
+		b inicio
+		
+	subtracao:
+		cmp r8, #0
+		beq naoTemElementos
+		cmp r8, #1
+		beq naoTemElementos
+						;como r6 é a próxima posição a ser preenchida, é preciso
+		sub r6, r6, #4	;voltar o ponteiro para o último valor preenchido
+		ldr r1, [r6]	;lê o valor do topo da pilha
+		sub r6, r6, #4	;atualiza o ponteiro
+		ldr r2, [r6]	;lê o segundo valor
+		sub r1, r1, r2	;subtrai r2 de r1
+		str r1, [r6], #4	;guarda na pilha
+		sub r8, r8, #1 ; agora tem um elemento a menos
+		b inicio
+		
+	multiplicacao:
+		cmp r8, #0
+		beq naoTemElementos
+		cmp r8, #1
+		beq naoTemElementos
+						;como r6 é a próxima posição a ser preenchida, é preciso
+		sub r6, r6, #4	;voltar o ponteiro para o último valor preenchido
+		ldr r1, [r6]	;lê o valor do topo da pilha
+		sub r6, r6, #4	;atualiza o ponteiro
+		ldr r2, [r6]	;lê o segundo valor
+		mul r0, r1, r2	;multiplica os dois
+		str r0, [r6], #4	;guarda na pilha
+		sub r8, r8, #1 ; agora tem um elemento a menos
+		b inicio
 		
 naoCabeMais:
-	mov r0, #5
-	mov r1, #0
-	ldr r2, =frasept1
-	swi 0x204
-	mov r1, #1
-	ldr r2, =frasept2
-	swi 0x204
+	mov r0, #2
 	mov r1, #2
-	ldr r2, =frasept3
+	ldr r2, =cheiapt1
 	swi 0x204
-	b inicio
+	add r1, r1, #1
+	add r1, r1, #1
+	ldr r2, =cheiapt2
+	swi 0x204
+	add r1, r1, #1
+	ldr r2, =cheiapt3
+	swi 0x204
+	add r1, r1, #1
+	ldr r2, =cheiapt4
+	swi 0x204
+	b loopBotoes
+
+naoTemElementos:
+	mov r0, #2
+	mov r1, #2
+	ldr r2, =vaziapt1
+	swi 0x204
+	add r1, r1, #1
+	ldr r2, =vaziapt2
+	swi 0x204
+	add r1, r1, #1
+	ldr r2, =vaziapt3
+	swi 0x204
+	add r1, r1, #1
+	ldr r2, =vaziapt4
+	swi 0x204
+	b loopBotoes
 	
 fim:
 	b fim
 
 pilha: .space 60 ;aloca 15 espaços de 4 bytes (32 bits)
-frasept1: .ascii "Pilha cheia, realize uma operação"
-frasept2: .ascii "ou clique no botão preto esquerdo"
-frasept3: .ascii "para resetar a pilha"
+cheiapt1: .ascii "Pilha cheia!\0"
+cheiapt2: .ascii "Realize uma operação ou\0"
+cheiapt3: .ascii "clique no botao esquerdo\0"
+cheiapt4: .ascii "para resetar a pilha.\0"
+
+vaziapt1: .ascii "Elementos insuficientes!\0"
+vaziapt2: .ascii "Adicione mais elementos na\0"
+vaziapt3: .ascii "pilha antes de realizar uma\0"
+vaziapt4: .ascii "operacao.\0"
