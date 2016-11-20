@@ -107,8 +107,8 @@ continua:
 		cmp r0, #0x800 ;se foi o botão mult
 		beq multiplicacao
 		
-		;cmp r0, #0x8000 ;se foi o botão div
-		;beq divisao
+		cmp r0, #0x8000 ;se foi o botão div
+		beq divisao
 		b inicio
 		
 		
@@ -160,6 +160,9 @@ continua:
 		mov r3, #0
 		add r8, r8, #1
 		b inicio
+		
+		
+		;operações
 	soma:
 		cmp r8, #0
 		beq naoTemElementos
@@ -205,6 +208,31 @@ continua:
 		sub r8, r8, #1 ; agora tem um elemento a menos
 		b inicio
 		
+	divisao:
+		cmp r8, #0
+		beq naoTemElementos
+		cmp r8, #1
+		beq naoTemElementos
+						;como r6 é a próxima posição a ser preenchida, é preciso
+		sub r6, r6, #4	;voltar o ponteiro para o último valor preenchido
+		ldr r1, [r6]	;lê o valor do topo da pilha
+		sub r6, r6, #4	;atualiza o ponteiro
+		ldr r2, [r6]	;lê o segundo valor
+		mov r0, #0		;r0 começa com 0 e no fim terá o resultado da divisão		
+		;não tem DIV, então tem que ir subtraindo r1 de r3 até que dê <= 0
+		loop:
+			add r0, r0, #1 ;r0++  (número de divisões feitas até agora +1)
+			sub r1, r1, r2 ;r1 -= r2
+			cmp r1, #0
+			beq terminou
+			bgt loop
+			sub r0, r0, #1 ;se for <zero, temos que lembrar de descontar um
+		terminou:
+		str r0, [r6], #4	;guarda na pilha
+		sub r8, r8, #1 ; agora tem um elemento a menos
+		b inicio
+	
+		;erros	
 naoCabeMais:
 	mov r0, #2
 	mov r1, #2
