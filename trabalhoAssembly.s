@@ -49,12 +49,16 @@ inicio:
 		mov r6, r5 ;volta o endereço do topo guardado
 		
 loopBotoes:
-	swi 0x203 ;descobre que botão foi pressionado
+	swi 0x202		;verifica se algum dos botões pretos foi pressionado
+	cmp r0, #0x02	;se foi o botão esquerdo, reinicia a pilha
+	beq reiniciaPilha
+
+	swi 0x203 ;descobre que botão azul foi pressionado
 	;lembrando que os botões azuis tem o seguinte layout
 	;	[1]	[2]	[3]		[+]
 	;	[4]	[5]	[6]		[-]
 	;	[7]	[8]	[9]		[*]
-	;	[]	[0]	[ENTER]		[/]
+	;	[<-][0]	[ENTER]	[/]
 	;
 	;Explicando melhor o que acontece, temos 16 botões azuis
 	;Em swi 0x203, r0 recebe um número com somente um bit ligado.
@@ -72,6 +76,9 @@ loopBotoes:
 	cmp r0, #0x04 ;se foi o botão 3
 	beq tres
 	
+	cmp r0, #0x08 ;se foi o botão soma
+	beq soma
+	
 	cmp r0, #0x10 ;se foi o botão 4
 	beq quatro
 
@@ -80,6 +87,9 @@ loopBotoes:
 	
 	cmp r0, #0x40 ;se foi o botão 6
 	beq seis
+	
+	cmp r0, #0x80 ;se foi o botão sub
+	beq subtracao
 	
 	cmp r0, #0x100 ;se foi o botão 7
 	beq sete
@@ -90,27 +100,23 @@ loopBotoes:
 	cmp r0, #0x400 ;se foi o botão 9
 	beq nove
 	
-	;cmp r0, #0x1000 -> não faz nada
-	;Talvez dê pra fazer algo como DEL (apaga o último dígito)
-
+	cmp r0, #0x800 ;se foi o botão mult
+	beq multiplicacao
+	
+	cmp r0, #0x1000 ;se foi o botão "<-"
+	beq backspace
+	
 	cmp r0, #0x2000 ;se foi o botão 0
 	beq zero
 	
 	cmp r0, #0x4000 ;se foi o botão Enter
 	beq enter
-
-	cmp r0, #0x08 ;se foi o botão soma
-	beq soma
-	
-	cmp r0, #0x80 ;se foi o botão sub
-	beq subtracao
-	
-	cmp r0, #0x800 ;se foi o botão mult
-	beq multiplicacao
 	
 	cmp r0, #0x8000 ;se foi o botão div
 	beq divisao
-	b inicio
+	
+	;se não foi nenhum, continua no loop
+	b loopBotoes
 	
 		
 	;~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,12 +171,35 @@ loopBotoes:
 		mov r5, r3
 		mul r3, r5, r4
 		b inicio
+		
+	;~~~~~~~~~~~~~~~~~~~~~~~~
+	;Outros botões
+	;~~~~~~~~~~~~~~~~~~~~~~~~
 	enter:
 		cmp r8, #15
 		beq naoCabeMais ;se já tem 15 elementos, não aceita o valor
 		str r3, [r6], #4 ;guarda o valor na pilha
 		mov r3, #0	;zera para o próximo valor começar em 0
 		add r8, r8, #1
+		b inicio
+		
+	backspace:
+		;para apagar o último dígito, basta dividir por 10
+		mov r5, #0	;r5 começa com 0 e no fim terá o resultado da divisão	
+		dividePorDez:
+			add r5, r5, #1 ;r5++  (número de divisões feitas até agora +1)
+			sub r3, r3, #10
+			cmp r3, #0
+			beq terminouDivDez ;se for igual a zero, é divisão exata
+			bgt dividePorDez ;se for maior, continua no loop
+			sub r5, r5, #1 ;se for menor, temos que lembrar de descontar 1
+		terminouDivDez:
+		mov r3, r5
+		b inicio
+		
+	reiniciaPilha:
+		ldr r6, =pilha ;ponteiro aponta para o fundo da pilha
+		mov r8, #0 ;volta pra 0 elementos
 		b inicio
 		
 		
@@ -214,8 +243,8 @@ loopBotoes:
 		ldr r1, [r6]	;lê o valor do topo da pilha
 		sub r6, r6, #4	;atualiza o ponteiro
 		ldr r2, [r6]	;lê o segundo valor
-		mul r0, r1, r2	;r1 = r1 * r2
-		str r0, [r6], #4;guarda na pilha
+		mul r5, r1, r2	;r1 = r1 * r2
+		str r5, [r6], #4;guarda na pilha
 		sub r8, r8, #1 	;agora tem um elemento a menos
 		b inicio
 		
@@ -233,16 +262,16 @@ loopBotoes:
 		beq divisaoPorZero ;testa se é divisão por zero
 		
 		;não tem DIV, então tem que ir subtraindo r1 de r3 até que dê <= 0
-		mov r0, #0		;r0 começa com 0 e no fim terá o resultado da divisão	
+		mov r5, #0		;r0 começa com 0 e no fim terá o resultado da divisão	
 		loop:
-			add r0, r0, #1 ;r0++  (número de divisões feitas até agora +1)
+			add r5, r5, #1 ;r0++  (número de divisões feitas até agora +1)
 			sub r1, r1, r2 ;r1 -= r2
 			cmp r1, #0
 			beq terminou ;se for igual a zero, é divisão exata
 			bgt loop ;se for maior, continua no loop
-			sub r0, r0, #1 ;se for menor, temos que lembrar de descontar 1
+			sub r5, r5, #1 ;se for menor, temos que lembrar de descontar 1
 		terminou:
-		str r0, [r6], #4;guarda na pilha
+		str r5, [r6], #4;guarda na pilha
 		sub r8, r8, #1	;agora tem um elemento a menos
 		b inicio
 	
