@@ -267,6 +267,8 @@ loopBotoes:
 			add r5, r5, #1 ;r0++  (número de divisões feitas até agora +1)
 			sub r1, r1, r2 ;r1 -= r2
 			cmp r1, #0
+			;sub r2, r2, r1 -> para inverter os operandos da divisao r2 -= r1
+			;cmp r2, #0
 			beq terminou ;se for igual a zero, é divisão exata
 			bgt loop ;se for maior, continua no loop
 			sub r5, r5, #1 ;se for menor, temos que lembrar de descontar 1
