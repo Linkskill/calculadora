@@ -1,4 +1,10 @@
 
+;	Notamos que o enunciado na lista geral de exercícios e no pdf contendo
+;	somente os enunciados dos trabalhos estão ligeiramente diferentes. Nossa
+;	implementação está de acordo com a versão da lista (15 elementos na pilha,
+;	sem operação de módulo, etc).
+
+
 	;r0, r1 e r2 -> usados como entradas e saídas do plugin Embest Board
 	;		Além disso, servem como operandos nas operações
 	;r3 -> o valor sendo digitado no momento
@@ -54,7 +60,7 @@ loopBotoes:
 	beq reiniciaPilha
 
 	swi 0x203 ;descobre que botão azul foi pressionado
-	;lembrando que os botões azuis tem o seguinte layout
+	;Os botões azuis possuem o seguinte layout
 	;	[1]	[2]	[3]		[+]
 	;	[4]	[5]	[6]		[-]
 	;	[7]	[8]	[9]		[*]
