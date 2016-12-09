@@ -1,9 +1,14 @@
 
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;	Notamos que o enunciado na lista geral de exercícios e no pdf contendo
 ;	somente os enunciados dos trabalhos estão ligeiramente diferentes. Nossa
 ;	implementação está de acordo com a versão da lista (15 elementos na pilha,
-;	sem operação de módulo, etc).
+;	sem botão para operação de módulo).
 
+;	Mesmo assim, fizemos um branch contendo as instruções necessárias para calcular
+;	A % B, ele apenas não é chamado em nenhum lugar, pois todos os botões já
+;	estão ocupados. O layout dos botões pode ser encontrado mais abaixo.
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	;r0, r1 e r2 -> usados como entradas e saídas do plugin Embest Board
 	;		Além disso, servem como operandos nas operações
@@ -30,7 +35,7 @@ inicio:
 	beq loopBotoes 	;se isso acontecer, não precisa mudar nada na tela
 	
 	mov r0, #0x00 
-	swi 0x201		;apaga os LEDs
+	swi 0x201 ;apaga os LEDs
 	swi 0x206 ;limpa a tela LCD
 	mov r0, #0
 	mov r1, #0
@@ -48,7 +53,7 @@ inicio:
 		ldr r2, [r6] ;pega o valor do topo da pilha
 		swi 0x205 ;imprime o valor
 		add r1, r1, #1 ;vai pra próxima linha do display LCD
-		cmp r6, r7 ;compara o topo atual com o fundo da pilha
+		cmp r6, r7 ;compara a posição atual com o fundo da pilha
 		beq continua ;se são iguais, então não precisa mais imprimir, sai do loop
 		b loopPilha ;senão, imprime o próximo
 	continua:
@@ -249,8 +254,8 @@ loopBotoes:
 		ldr r1, [r6]	;lê o valor do topo da pilha
 		sub r6, r6, #4	;atualiza o ponteiro
 		ldr r2, [r6]	;lê o segundo valor
-		mul r5, r1, r2	;r1 = r1 * r2
-		str r5, [r6], #4;guarda na pilha
+		mul r0, r1, r2	;r1 = r1 * r2
+		str r0, [r6], #4;guarda na pilha
 		sub r8, r8, #1 	;agora tem um elemento a menos
 		b inicio
 		
@@ -268,21 +273,48 @@ loopBotoes:
 		beq divisaoPorZero ;testa se é divisão por zero
 		
 		;não tem DIV, então tem que ir subtraindo r1 de r3 até que dê <= 0
-		mov r5, #0		;r0 começa com 0 e no fim terá o resultado da divisão	
-		loop:
-			add r5, r5, #1 ;r0++  (número de divisões feitas até agora +1)
+		mov r0, #0		;r0 começa com 0 e no fim terá o resultado da divisão	
+		loopDiv:
+			add r0, r0, #1 ;r0++  (número de divisões feitas até agora +1)
 			sub r1, r1, r2 ;r1 -= r2
 			cmp r1, #0
 			;sub r2, r2, r1 -> para inverter os operandos da divisao r2 -= r1
 			;cmp r2, #0
-			beq terminou ;se for igual a zero, é divisão exata
-			bgt loop ;se for maior, continua no loop
-			sub r5, r5, #1 ;se for menor, temos que lembrar de descontar 1
-		terminou:
-		str r5, [r6], #4;guarda na pilha
+			beq terminouDiv ;se for igual a zero, é divisão exata
+			bgt loopDiv ;se for maior, continua no loop
+			sub r0, r0, #1 ;se for menor, temos que lembrar de descontar 1
+		terminouDiv:
+		str r0, [r6], #4;guarda na pilha
 		sub r8, r8, #1	;agora tem um elemento a menos
 		b inicio
 	
+	modulo:
+		cmp r8, #0
+		beq naoTemElementos
+		cmp r8, #1
+		beq naoTemElementos
+		sub r6, r6, #4	;volta o ponteiro para o último valor preenchido
+		ldr r1, [r6]	;lê o valor do topo da pilha
+		sub r6, r6, #4	;atualiza o ponteiro
+		ldr r2, [r6]	;lê o segundo valor
+		
+		cmp r2, #0
+		beq divisaoPorZero ;testa se é divisão por zero
+		
+		;não tem DIV, então tem que ir subtraindo r1 de r3 até que dê <= 0
+		loopMod:
+			sub r1, r1, r2 ;r1 -= r2
+			cmp r1, #0
+			;sub r2, r2, r1 -> para inverter os operandos da divisao r2 -= r1
+			;cmp r2, #0
+			beq terminouMod ;se for igual a zero, é divisão exata
+			bgt loopMod ;se for maior, continua no loop
+			add r1, r1, r2 ;se for menor, temos que lembrar de somar novamente
+		terminouMod:
+		str r1, [r6], #4;guarda na pilha
+		sub r8, r8, #1	;agora tem um elemento a menos
+		b inicio
+		
 	;~~~~~~~~~~~~~~~~~~~~~~~~
 	;Possíveis erros
 	;~~~~~~~~~~~~~~~~~~~~~~~~
